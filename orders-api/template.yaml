@@ -22,6 +22,47 @@ Resources:
       KeySchema:
         - AttributeName: orderId
           KeyType: HASH
+        
+  OrdersDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+
+  OrdersQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 60
+      SqsManagedSseEnabled: true
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt OrdersDeadLetterQueue.Arn
+        maxReceiveCount: 5
+
+  OrderWorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: order_worker/
+      Handler: app.lambda_handler
+      Runtime: python3.14
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          ORDERS_TABLE: !Ref OrdersTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource: !GetAtt OrdersTable.Arn
+      Events:
+        ProcessOrders:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt OrdersQueue.Arn
+            BatchSize: 5
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
 
   HelloWorldFunction:
     Type: AWS::Serverless::Function
