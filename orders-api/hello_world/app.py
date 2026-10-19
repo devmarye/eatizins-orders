@@ -13,6 +13,8 @@ logger.setLevel(logging.INFO)
 # Created outside the handler so warm invocations can reuse it.
 table = boto3.resource("dynamodb").Table(os.environ["ORDERS_TABLE"])
 
+sqs = boto3.client("sqs")
+queue_url = os.environ["ORDERS_QUEUE_URL"]
 
 def json_default(value):
     # DynamoDB returns numbers as Decimal objects.
@@ -81,6 +83,13 @@ def create_order(event):
     table.put_item(
         Item=order,
         ConditionExpression="attribute_not_exists(orderId)",
+    )
+    
+    sqs.send_message(
+        QueueUrl=queue_url,
+        MessageBody=json.dumps({
+            "orderId": order["orderId"],
+        }),
     )
 
     logger.info("Order created: %s", order["orderId"])

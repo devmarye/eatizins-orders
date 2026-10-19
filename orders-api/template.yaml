@@ -75,7 +75,10 @@ Resources:
       Environment:
         Variables:
           ORDERS_TABLE: !Ref OrdersTable
+          ORDERS_QUEUE_URL: !Ref OrdersQueue
       Policies:
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt OrdersQueue.QueueName
         - Statement:
             - Effect: Allow
               Action:

@@ -10,7 +10,6 @@ logger.setLevel(logging.INFO)
 
 table = boto3.resource("dynamodb").Table(os.environ["ORDERS_TABLE"])
 
-
 def process_order(order_id):
     try:
         table.update_item(
